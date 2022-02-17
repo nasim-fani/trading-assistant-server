@@ -19,6 +19,7 @@ from mainapp import views
 
 urlpatterns = [
     path('company_list', views.get_company_codes),
-    path('andicators', views.get_andicators),
-    path(r'stocks/<str:operator>/<int:number>/<str:indicator>', views.get_stocks)
+    path('indicators', views.get_indicators),
+    # path(r'stocks/<str:operator>/<int:number>/<str:indicator>/<int:days>', views.get_stocks),
+    path('filter', views.filter_list)
 ]

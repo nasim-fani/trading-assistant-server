@@ -19,14 +19,15 @@ class RedisClient:
 
 
 class Indicator:
-    def calculate_indicator(self, indicator, stock):
+    def calculate_indicator(self, indicator, stock, day):
         stock_df = pd.DataFrame.from_dict(stock, orient='index')
         # print(stock_df)
-        if indicator == "RSI":
+        if "RSI" in indicator:
             try:
+                window = int(indicator[3:])
                 if 'Close' in stock_df.columns:
                     close = stock_df['Close']
-                    res = ta.momentum.RSIIndicator(close[-100:]).rsi().dropna()
+                    res = ta.momentum.RSIIndicator(close=close[-day:], window=window).rsi().dropna()
                     # print(res)
                     return res
             except Exception as ex:

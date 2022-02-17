@@ -3,8 +3,8 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from datalayer.service import Indicator, RedisClient
 from mainapp.models import Response as response
-from django.http import JsonResponse
-
+from django.http import JsonResponse, HttpResponse
+import numpy as np
 from rest_framework import status
 import pickle
 import pandas as pd
@@ -33,13 +33,13 @@ def get_company_codes(request):
 
 
 @api_view(['GET'])
-def get_andicators(request):
+def get_indicators(request):
     try:
-        andicators = ["RSI", "MACD"]  # todo update list
+        indicators = ["RSI5", "RSI14", "MACD"]  # todo update list
         res = response()
         res.status_code = status.HTTP_200_OK
         res.status_text = 'OK!'
-        res.result = json.loads(json.dumps(andicators))
+        res.result = json.loads(json.dumps(indicators))
         return Response(data=json.loads(json.dumps(res.__dict__)))
     except Exception as ex:
         res = response()
@@ -49,8 +49,7 @@ def get_andicators(request):
         return Response(data=json.loads(json.dumps(res.__dict__)))
 
 
-@api_view(['GET'])
-def get_stocks(request, operator: str, number: int, indicator: str):
+def get_stocks(operator: str, number: int, indicator: str, days: int):
     try:
         result = []
         data = redis_client.get_all_companies()
@@ -58,26 +57,58 @@ def get_stocks(request, operator: str, number: int, indicator: str):
         company_list_price = list(filter(lambda x: 'Price' in x, company_list))
         for company_price in company_list_price:
             stock = pickle.loads(redis_client.get_stocks(company_price))
-            calculated_indicator = indicator_service.calculate_indicator(indicator, stock)
+            calculated_indicator = indicator_service.calculate_indicator(indicator, stock, days)
             if calculated_indicator is None:
                 continue
-            if operator == 'maceq':
+            if operator == 'eq':
                 calculated_indicator = calculated_indicator[calculated_indicator == number]
-            elif operator == 'macg':
+            elif operator == 'gr':
                 calculated_indicator = calculated_indicator[calculated_indicator > number]
-            elif operator == 'macl':
+            elif operator == 'ls':
                 calculated_indicator = calculated_indicator[calculated_indicator < number]
             if len(calculated_indicator) > 0:
                 result.append(company_price)
 
+        #     res = response()
+        #     res.status_code = status.HTTP_200_OK
+        #     res.status_text = 'Ok!'
+        #     res.result = json.loads(json.dumps(result))
+        #     return Response(data=json.loads(json.dumps(res.__dict__)))
+        return result
+    except Exception as ex:
+        #     res = response()
+        #     res.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        #     res.status_text = str(ex)
+        #     res.result = None
+        #     return Response(data=json.loads(json.dumps(res.__dict__)))
+        print('hh')
+
+
+@api_view(['GET'])
+def filter_list(request):
+    try:
+        body_unicode = json.loads(request.body.decode('utf-8'))
+        final = []
+        # body = body_unicode.json()
+        # content = body['content']
+        # print(len(body_unicode))
+        for i in range(0, len(body_unicode)):
+            filtered = get_stocks(body_unicode[i]['operator'], body_unicode[i]['number'], body_unicode[i]['indicator'],
+                                  body_unicode[i]['days'])
+            if len(final) == 0:
+                final = filtered
+            final = [value for value in final if value in filtered]
+            # print(final)
+        print(len(final))
         res = response()
         res.status_code = status.HTTP_200_OK
         res.status_text = 'Ok!'
-        res.result = json.loads(json.dumps(result))
+        res.result = json.loads(json.dumps(final))
         return Response(data=json.loads(json.dumps(res.__dict__)))
     except Exception as ex:
+        print(str(ex) + "jjj")
         res = response()
         res.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         res.status_text = str(ex)
-        res.result = None
+        res.result = str(ex)
         return Response(data=json.loads(json.dumps(res.__dict__)))
