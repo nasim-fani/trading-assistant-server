@@ -18,7 +18,7 @@ from django.urls import path
 from mainapp import views
 
 urlpatterns = [
-    path('company_list', views.get_company_codes),
+    path('symbols', views.get_symbols),
     path('indicators', views.get_indicators),
     # path(r'stocks/<str:operator>/<int:number>/<str:indicator>/<int:days>', views.get_stocks),
     path('filter', views.filter_list)
