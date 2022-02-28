@@ -21,5 +21,6 @@ urlpatterns = [
     path('symbols', views.get_symbols),
     path('indicators', views.get_indicators),
     # path(r'stocks/<str:operator>/<int:number>/<str:indicator>/<int:days>', views.get_stocks),
-    path('filter', views.filter_list)
+    path('filter', views.filter_list),
+    path(r'symbol/<str:stock_id>', views.get_symbol)
 ]

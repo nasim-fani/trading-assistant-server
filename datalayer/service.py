@@ -22,31 +22,49 @@ class RedisClient:
 
 
 class Indicator:
-    def calculate_indicator(self, indicator, stock, day):
+    def calculate_indicator(self, filtering, stock, day):
         stock_df = pd.DataFrame.from_dict(stock, orient='index')
-        window = int(indicator[3:])
+        window = filtering["window"]
+        indicator = filtering["name"]
         try:
             if 'Close' in stock_df.columns:
                 close = stock_df['Close']
-                if "RSI" in indicator:
+                if indicator == "RSI":
                     res = ta.momentum.RSIIndicator(close=close, window=window).rsi().dropna()
-                elif "BollingerBands" in indicator:
+                elif indicator == "ROC":
+                    res = ta.momentum.ROCIndicator(close=close, window=window).roc().dropna()
+                elif indicator == "BollingerBands":
                     res = ta.volatility.BollingerBands(close=close,
-                                                       window=window).bollinger_hband().dropna()  # todo check function
-                elif "Stochastic" in indicator:
-                    res = ta.momentum.stochrsi(close=close, window_slow=window).macd().dropna()  # todo window
-                elif "MACD" in indicator:
-                    res = ta.trend.MACD(close=close, window_slow=window).macd().dropna()  # todo window
-                elif "MFI" in indicator:
+                                                       window=window).bollinger_hband().dropna()
+                elif indicator == "Stochastic":
+                    res = ta.momentum.stochrsi(close=close, window_slow=window).macd().dropna() #todo functionesh ghalate
+                elif indicator == "MACD":
+                    res = ta.trend.MACD(close=close, window_slow=window).macd().dropna()
+                elif indicator == "MFI":
                     if 'High' and 'Low' in stock_df.columns:
                         high = stock_df['High']
                         low = stock_df['Low']
                         res = ta.volume.MFIIndicator(high=high, low=low, close=close,
-                                                     window_slow=window).macd().dropna()
+                                                     window_slow=window).macd().dropna()  #todo functionesh ghalate
+                elif indicator == "AwesomeOscillator":
+                    if 'High' and 'Low' in stock_df.columns:
+                        high = stock_df['High']
+                        low = stock_df['Low']
+                        res = ta.momentum.AwesomeOscillatorIndicator(high=high, low=low, window1=window, window2=filtering["window2"]) \
+                            .awesome_oscillator().dropna()
+                elif indicator == "KAMA":
+                    res = ta.momentum.KAMAIndicator(close=close, window=window, pow1=filtering["pow1"], pow2=filtering["pow2"]) \
+                            .kama().dropna()
+                elif indicator == "PPO":
+                    res = ta.momentum.PercentagePriceOscillator(close=close, window_slow=window, window_fast=filtering["window_fast"], window_sign=filtering["window_sign"]) \
+                            .ppo().dropna()
+                elif indicator == "PVO":
+                    if 'Volume' in stock_df.columns:
+                        res = ta.momentum.PercentageVolumeOscillator(volume=stock_df['Volume'], window_slow=window, window_fast=filtering["window_fast"], window_sign=filtering["window_sign"]) \
+                            .pvo().dropna()
             return res[-day:]
         except Exception as ex:
             print(str(ex))
-            print(stock)
 
     def group_map(self, id):
         csv_file = csv.reader(open('C:/Users/nasim/Desktop/project/EX_api/Groups.csv', "r", encoding="utf8"),

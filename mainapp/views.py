@@ -26,25 +26,42 @@ def get_company_codes():
 
 @api_view(['GET'])
 def get_symbols(request):
-    # try:
-    result = []
-    codes = json.loads(get_company_codes())
-    for code in codes:
-        stock = pickle.loads(redis_client.get_symbol(code))
-        result.append(indicator_service.name_map(code, stock))
-    res = response()
-    res.status_code = status.HTTP_200_OK
-    res.status_text = 'OK!'
-    res.result = json.loads(json.dumps(result))
-    return Response(data=json.loads(json.dumps(res.__dict__)))
+    try:
+        result = []
+        codes = json.loads(get_company_codes())
+        for code in codes:
+            stock = pickle.loads(redis_client.get_symbol(code))
+            result.append(indicator_service.name_map(code, stock))
+        res = response()
+        res.status_code = status.HTTP_200_OK
+        res.status_text = 'OK!'
+        res.result = json.loads(json.dumps(result))
+        return Response(data=json.loads(json.dumps(res.__dict__)))
+    except Exception as ex:
+        res = response()
+        res.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        res.status_text = str(ex)
+        res.result = None
+        return Response(data=json.loads(json.dumps(res.__dict__)))
 
 
-# except Exception as ex:
-#     res = response()
-#     res.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-#     res.status_text = str(ex)
-#     res.result = None
-#     return Response(data=json.loads(json.dumps(res.__dict__)))
+@api_view(['GET'])
+def get_symbol(request, stock_id):
+    try:
+        stock_id = ":1:"+stock_id+"-Price"
+        stock = pickle.loads(redis_client.get_symbol(stock_id))
+        result = (indicator_service.name_map(stock_id, stock))
+        res = response()
+        res.status_code = status.HTTP_200_OK
+        res.status_text = 'OK!'
+        res.result = json.loads(json.dumps(result))
+        return Response(data=json.loads(json.dumps(res.__dict__)))
+    except Exception as ex:
+        res = response()
+        res.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        res.status_text = str(ex)
+        res.result = None
+        return Response(data=json.loads(json.dumps(res.__dict__)))
 
 
 @api_view(['GET'])
@@ -64,25 +81,27 @@ def get_indicators(request):
         return Response(data=json.loads(json.dumps(res.__dict__)))
 
 
-def get_stocks(operator: str, number: int, indicator: str, days: int):
+def filter_stock(filtering, period):
     try:
+        comparator = filtering["comparator"]
+        operand = filtering["operand"]
         result = []
         data = redis_client.get_all_companies()
         company_list = [item.decode('utf-8') for item in data]
         company_list_price = list(filter(lambda x: 'Price' in x, company_list))
         for company_price in company_list_price:
             stock = pickle.loads(redis_client.get_symbol(company_price))
-            calculated_indicator = indicator_service.calculate_indicator(indicator, stock, days)
+            calculated_indicator = indicator_service.calculate_indicator(filtering, stock, period)
             if calculated_indicator is None:
                 continue
-            if operator == 'eq':
-                calculated_indicator = calculated_indicator[calculated_indicator == number]
-            elif operator == 'gr':
-                calculated_indicator = calculated_indicator[calculated_indicator > number]
-            elif operator == 'ls':
-                calculated_indicator = calculated_indicator[calculated_indicator < number]
+            if comparator == 'eq':
+                calculated_indicator = calculated_indicator[calculated_indicator == operand]
+            elif comparator == 'gr':
+                calculated_indicator = calculated_indicator[calculated_indicator > operand]
+            elif comparator == 'ls':
+                calculated_indicator = calculated_indicator[calculated_indicator < operand]
             if len(calculated_indicator) > 0:
-                result.append(indicator_service.name_map(company_price))
+                result.append(indicator_service.name_map(company_price,stock))
         return result
     except Exception as ex:
         print(str(ex))
@@ -93,12 +112,9 @@ def filter_list(request):
     try:
         body_unicode = json.loads(request.body.decode('utf-8'))
         final = []
-        # body = body_unicode.json()
-        # content = body['content']
-        # print(len(body_unicode))
-        for i in range(0, len(body_unicode)):
-            filtered = get_stocks(body_unicode[i]['operator'], body_unicode[i]['number'], body_unicode[i]['indicator'],
-                                  body_unicode[i]['days'])
+        filters = body_unicode["filters"]
+        for filtering in filters:
+            filtered = filter_stock(filtering, body_unicode["period"])
             if len(final) == 0:
                 final = filtered
             final = [value for value in final if value in filtered]
@@ -107,10 +123,10 @@ def filter_list(request):
         res = response()
         res.status_code = status.HTTP_200_OK
         res.status_text = 'Ok!'
-        res.result = json.loads(json.dumps(final))
+        res.stocks = json.loads(json.dumps(final))
         return Response(data=json.loads(json.dumps(res.__dict__)))
     except Exception as ex:
-        print(str(ex))
+        # print(str(ex))
         res = response()
         res.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
         res.status_text = str(ex)
