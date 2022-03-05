@@ -34,10 +34,10 @@ class Indicator:
                 elif indicator == "ROC":
                     res = ta.momentum.ROCIndicator(close=close, window=window).roc().dropna()
                 elif indicator == "BollingerBands":
-                    res = ta.volatility.BollingerBands(close=close,
-                                                       window=window).bollinger_hband().dropna()
-                elif indicator == "Stochastic":
-                    res = ta.momentum.stochrsi(close=close, window_slow=window).macd().dropna() #todo functionesh ghalate
+                    res = ta.volatility.BollingerBands(close=close, window=window).bollinger_hband().dropna()
+                elif indicator == "StochRSI":
+                    res = ta.momentum.stochrsi(close=close, window=window, smooth1=filtering["smooth1"],
+                                               smooth2=filtering["smooth2"]).stochrsi().dropna()
                 elif indicator == "MACD":
                     res = ta.trend.MACD(close=close, window_slow=window).macd().dropna()
                 elif indicator == "MFI":
@@ -45,49 +45,99 @@ class Indicator:
                         high = stock_df['High']
                         low = stock_df['Low']
                         res = ta.volume.MFIIndicator(high=high, low=low, close=close,
-                                                     window_slow=window).macd().dropna()  #todo functionesh ghalate
-                elif indicator == "AwesomeOscillator":
+                                                     window_slow=window).macd().dropna()  # todo functionesh ghalate
+
+                elif indicator == "KAMA":
+                    res = ta.momentum.KAMAIndicator(close=close, window=window, pow1=filtering["pow1"],
+                                                    pow2=filtering["pow2"]).dropna()
+                elif indicator == "PPO":
+                    res = ta.momentum.PercentagePriceOscillator(close=close, window_slow=window,
+                                                                window_fast=filtering["window_fast"],
+                                                                window_sign=filtering["window_sign"]).ppo().dropna()
+                elif indicator == "StochasticOscillator":
                     if 'High' and 'Low' in stock_df.columns:
                         high = stock_df['High']
                         low = stock_df['Low']
-                        res = ta.momentum.AwesomeOscillatorIndicator(high=high, low=low, window1=window, window2=filtering["window2"]) \
-                            .awesome_oscillator().dropna()
-                elif indicator == "KAMA":
-                    res = ta.momentum.KAMAIndicator(close=close, window=window, pow1=filtering["pow1"], pow2=filtering["pow2"]) \
-                            .kama().dropna()
-                elif indicator == "PPO":
-                    res = ta.momentum.PercentagePriceOscillator(close=close, window_slow=window, window_fast=filtering["window_fast"], window_sign=filtering["window_sign"]) \
-                            .ppo().dropna()
+                        res = ta.momentum.StochasticOscillator(high=high, low=low, close=close, window=window,
+                                                               smooth_window=filtering[
+                                                                   "smooth_window"]).stoch().dropna()
+                elif indicator == "TSI":
+                    res = ta.momentum.TSIIndicator(close=close, window_slow=window,
+                                                   window_fast=filtering["window_fast"]).tsi().dropna()
+
+                elif indicator == "UltimateOscillator":
+                    if 'High' and 'Low' in stock_df.columns:
+                        high = stock_df['High']
+                        low = stock_df['Low']
+                        res = ta.momentum.UltimateOscillator(high=high, low=low, close=close, window1=window,
+                                                             window2=filtering["window2"], window3=filtering["window3"],
+                                                             weight1=filtering["weight1"], weight2=filtering["weight2"],
+                                                             weight3=filtering[
+                                                                 "weight3"]).ultimate_oscillator().dropna()
+                elif indicator == "WilliamsR":
+                    if 'High' and 'Low' in stock_df.columns:
+                        high = stock_df['High']
+                        low = stock_df['Low']
+                        res = ta.momentum.WilliamsRIndicator(high=high, low=low, close=close, lbp=window) \
+                            .williams_r().dropna()
+                elif indicator == "stoch":
+                    if 'High' and 'Low' in stock_df.columns:
+                        high = stock_df['High']
+                        low = stock_df['Low']
+                        res = ta.momentum.awesome_oscillator(high=high, low=low, close=close, window=window,
+                                                             smooth_window=filtering["smooth_window"]).dropna()
+            else:
+                if indicator == "AwesomeOscillatorIndicator":
+                    if 'High' and 'Low' in stock_df.columns:
+                        high = stock_df['High']
+                        low = stock_df['Low']
+                        res = ta.momentum.AwesomeOscillatorIndicator(high=high, low=low, window1=window,
+                                                                     window2=filtering[
+                                                                         "window2"]).awesome_oscillator().dropna()
+                elif indicator == "awesome_oscillator":
+                    if 'High' and 'Low' in stock_df.columns:
+                        high = stock_df['High']
+                        low = stock_df['Low']
+                        res = ta.momentum.awesome_oscillator(high=high, low=low, window1=window,
+                                                             window2=filtering["window2"]).dropna()
                 elif indicator == "PVO":
                     if 'Volume' in stock_df.columns:
-                        res = ta.momentum.PercentageVolumeOscillator(volume=stock_df['Volume'], window_slow=window, window_fast=filtering["window_fast"], window_sign=filtering["window_sign"]) \
-                            .pvo().dropna()
+                        res = ta.momentum.PercentageVolumeOscillator(volume=stock_df['Volume'], window_slow=window,
+                                                                     window_fast=filtering["window_fast"],
+                                                                     window_sign=filtering[
+                                                                         "window_sign"]).pvo().dropna()
+
             return res[-day:]
         except Exception as ex:
             print(str(ex))
 
-    def group_map(self, id):
+    def group_map(self, stock_id):
         csv_file = csv.reader(open('C:/Users/nasim/Desktop/project/EX_api/Groups.csv', "r", encoding="utf8"),
                               delimiter=",")
         for row in csv_file:
-            if id == row[1]:
+            if stock_id == row[1]:
                 return row[0]
         return "Not Found"
 
-    def name_map(self, id, stock):
+    def name_map(self, stock_id, stock):
         csv_file = csv.reader(open('C:/Users/nasim/Desktop/project/EX_api/Companies.csv', "r", encoding="utf8"),
                               delimiter=",")
         stock_df = pd.DataFrame.from_dict(stock, orient='index')
         last = stock_df.tail(1)
-        close = "unspecified"
+        close = -1
         trend = -1
         if 'Close' in last.columns:
             close = last.iloc[-1]["Close"]
             if 'Open' in last.columns:
                 trend = last.iloc[-1]["Open"] > close
-
-        name = id.split(":")[2].split("-")[0]
+        name = stock_id.split(":")[2].split("-")[0]
         for row in csv_file:
             if name == row[4]:
-                return {'id': id, 'name': row[2], 'group': self.group_map(row[9]), 'close': close, 'trend': int(trend)}
+                return {'id': stock_id, 'name': row[2], 'group': self.group_map(row[9]), 'close': close,
+                        'trend': int(trend), 'group_id': int(row[9])}
         return "Not Found"
+
+    def graph(self, stock_id,stock):
+        stock_df = pd.DataFrame.from_dict(stock, orient='index')
+        if 'Close' and 'Open' and 'High' and 'Low' in stock_df.columns:
+            return {"data": stock_df[["High", "Low", "Open", "Close"]].to_dict(), "stock_id":stock_id}

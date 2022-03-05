@@ -48,9 +48,10 @@ def get_symbols(request):
 @api_view(['GET'])
 def get_symbol(request, stock_id):
     try:
-        stock_id = ":1:"+stock_id+"-Price"
-        stock = pickle.loads(redis_client.get_symbol(stock_id))
-        result = (indicator_service.name_map(stock_id, stock))
+        full_id = ":1:"+stock_id+"-Price"
+        stock = pickle.loads(redis_client.get_symbol(full_id))
+        result = indicator_service.graph(stock_id, stock)
+        # result.stock_id = stock_id
         res = response()
         res.status_code = status.HTTP_200_OK
         res.status_text = 'OK!'
@@ -67,7 +68,7 @@ def get_symbol(request, stock_id):
 @api_view(['GET'])
 def get_indicators(request):
     try:
-        indicators = ["RSI5", "RSI14", "MACD26", "BollingerBands20", "Stochastic14", "MFI14"]  # todo update list
+        indicators = ["RSI", "RSI", "MACD", "BollingerBands", "Stochastic", "MFI"]  # todo update list
         res = response()
         res.status_code = status.HTTP_200_OK
         res.status_text = 'OK!'
