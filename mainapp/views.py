@@ -48,7 +48,7 @@ def get_symbols(request):
 @api_view(['GET'])
 def get_symbol(request, stock_id):
     try:
-        full_id = ":1:"+stock_id+"-Price"
+        full_id = ":1:" + stock_id + "-Price"
         stock = pickle.loads(redis_client.get_symbol(full_id))
         result = indicator_service.graph(stock_id, stock)
         # result.stock_id = stock_id
@@ -68,7 +68,23 @@ def get_symbol(request, stock_id):
 @api_view(['GET'])
 def get_indicators(request):
     try:
-        indicators = ["RSI", "RSI", "MACD", "BollingerBands", "Stochastic", "MFI"]  # todo update list
+        indicators = [{"name": "RSI", "params": ["window"]},
+                      {"name": "ROC", "params": ["window"]},
+                      {"name": "BollingerBands", "params": ["window"]},
+                      {"name": "StochRSI", "params": ["window", "smooth1", "smooth2"]},
+                      {"name": "MACD", "params": ["window_slow"]},
+                      {"name": "MFI", "params": ["window_slow"]},
+                      {"name": "KAMA", "params": ["window", "pow1", "pow2"]},
+                      {"name": "PPO", "params": ["window_slow", "window_fast", "window_sign"]},
+                      {"name": "StochasticOscillator", "params": ["window", "smooth_window"]},
+                      {"name": "TSI", "params": ["window_slow", "window_fast"]},
+                      {"name": "UltimateOscillator",
+                       "params": ["window1", "window2", "window3", "weight1", "weight2", "weight3"]},
+                      {"name": "WilliamsR", "params": ["lbp"]},
+                      {"name": "stoch", "params": ["window", "smooth_window"]},
+                      {"name": "AwesomeOscillatorIndicator", "params": ["window1", "window2"]},
+                      {"name": "PVO", "params": ["window_slow", "window_fast", "window_sign"]}
+                      ]
         res = response()
         res.status_code = status.HTTP_200_OK
         res.status_text = 'OK!'
@@ -102,7 +118,7 @@ def filter_stock(filtering, period):
             elif comparator == 'ls':
                 calculated_indicator = calculated_indicator[calculated_indicator < operand]
             if len(calculated_indicator) > 0:
-                result.append(indicator_service.name_map(company_price,stock))
+                result.append(indicator_service.name_map(company_price, stock))
         return result
     except Exception as ex:
         print(str(ex))
